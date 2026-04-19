@@ -11,7 +11,9 @@ load_dotenv()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_data():
+    print("取得PM2.5資料中")
     try:
+        #api_url="https://data.moenv.gov.tw/api/v2/aqx_p_02?api_key=af57253c-e838-46da-a1f5-12b43afd75f3&limit=1000&sort=datacreationdate%20desc&format=CSV"
         api_url="https://data.moenv.gov.tw/api/v2/aqx_p_02?api_key=846e44e1-8cc5-4893-ad87-c79d2d383706&limit=1000&sort=datacreationdate%20desc&format=JSON"
         resp=requests.get(api_url,verify=False)
         df=pd.read_json(io.StringIO(resp.text))
@@ -24,6 +26,7 @@ def get_data():
     return None
 
 def insert_data(data):
+     #mysql 忽略語法跟佔位符不一樣，原寫法是用SQList格式
     try:
         sqlstr='insert ignore into data (site,county,pm25,datacreationdate,itemunit)\
         values(%s,%s,%s,%s,%s)'
@@ -33,7 +36,7 @@ def insert_data(data):
             print("目前無更新資料")
     except Exception as e:
         print(e)
-        input()
+        
 
 
 def open_db():
@@ -77,22 +80,26 @@ def create_table():
         unique key uq_site_datacreationdate(site,datacreationdate)
         )
         '''
-        cursor.execute(sqlstr)
+        index=cursor.execute(sqlstr)
         conn.commit()
-        print("資料表建立成功")
+        if index:
+            print("建立資料表成功!")
     except Exception as e:
-     print(e)
+        print(e)
 
 
+print("-----------------------------------------")
+print(f"運行時間:{datetime.now()}")
 
 conn,cursor=open_db()
-if conn is not None:
+if conn:
+    print("開啟資料庫成功")
     create_table()
-    data=get_data()
+    data=get_data()   
     if data:
-        insert_data(data)
-    else:    
+        insert_data(data)   
+    else:
         print("目前無資料")
     conn.close()
 else:
-    print("開啟資料庫失敗")
+    print("資料庫開啟失敗!")
